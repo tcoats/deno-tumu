@@ -10,7 +10,17 @@ Run code on your server using configuration and javascript hosted on the web.
 2. [Install Deno](https://deno.land)
 3. Configure DNS entries e.g. A record for *.yourdomainhere.com -> server IP address
 4. Run Tumu against a `state.json` file describing services to run:
-  `deno run --allow-net --allow-run --allow-read=./ --allow-write=./ --unstable --reload https://raw.githubusercontent.com/tcoats/deno-tumu/master/mod.js https://hostedsomewhere.com/state.json`
+  ```javascript
+  deno run \
+    --allow-net \
+    --allow-run \
+    --allow-read=./ \
+    --allow-write=./ \
+    --unstable \
+    --reload \
+    https://raw.githubusercontent.com/tcoats/deno-tumu/master/mod.js \
+    https://hostedsomewhere.com/state.json
+  ```
 5. Adjust your `state.json` file and service code.
 6. Tumu will automatically restart.
 7. Caddy will automatially serve using TLS.
