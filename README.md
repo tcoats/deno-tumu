@@ -2,11 +2,13 @@
 
 Caddy. Deno. PaaS.
 
+Run code on your server using configuration and javascript hosted on the web.
+
 ## Steps
 
 1. [Install Caddy](https://caddyserver.com)
 2. [Install Deno](https://deno.land)
-3. Configure DNS e.g. A record for *.yourdomainhere.com -> server IP address
+3. Configure DNS entries e.g. A record for *.yourdomainhere.com -> server IP address
 4. Run Tumu against a `state.json` file describing services to run:
   `deno run --allow-net --allow-run --allow-read=./ --allow-write=./ --unstable --reload https://raw.githubusercontent.com/tcoats/deno-tumu/master/mod.js https://hostedsomewhere.com/state.json`
 5. Adjust your `state.json` file and service code.
