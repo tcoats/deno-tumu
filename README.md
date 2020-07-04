@@ -25,6 +25,23 @@ Run code on your server using configuration and javascript hosted on the web.
 6. Tumu will automatically restart.
 7. Caddy will automatially serve using TLS.
 
+## state.json
+
+```json
+{
+  "serve": {
+    "test1.yourdomainhere.com": "http://localhost:8080/echo.js",
+    "test2.yourdomainhere.com": "http://localhost:8080/echo.js"
+  },
+  "refresh": 10000,
+  "starting_port": 9001
+}
+```
+
+`refresh` and `starting_port` are optional and will default to the values above.
+
+`serve` is an object that maps the domains to serve from and the code to execute for that instance.
+
 ## Status
 
 - [x] Filesystem isolation
@@ -34,3 +51,4 @@ Run code on your server using configuration and javascript hosted on the web.
 - [ ] Memory quota. Available in V8. Not available within Deno.
 - [ ] Pub sub.
 - [ ] Single process. Requires a custom cli built within Deno.
+- [ ] Recycle ports.
