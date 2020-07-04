@@ -1,15 +1,4 @@
-// deno run --allow-net --allow-read https://deno.land/std/http/file_server.ts -p 8081
-// deno run --allow-net --allow-run --allow-read=./ --allow-write=./ --unstable --reload=http://localhost:8081/tumu.js http://localhost:8081/mod.js http://localhost:8081/state.json
-
-// Status:
-//   Filesystem isolation: yes
-//   Opening ports isolation: no
-//   Network isolation: no (should restrict localhost access)
-//   Processor isolation: no
-//   Auto host tls: yes
-//   Messaging: no
-
-// Lib
+// lib
 const hash = s => [...s].reduce((hash, c) => (((hash << 5) - hash) + c.charCodeAt(0)) | 0, 0)
 const sleep = time => new Promise(res => setTimeout(res, time))
 const wait = (fn, delay) => new Promise(async res => {

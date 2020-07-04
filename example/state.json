@@ -1,0 +1,6 @@
+{
+  "serve": {
+    "test1.yourdomainhere.com": "http://localhost:8080/echo.js",
+    "test2.yourdomainhere.com": "http://localhost:8080/echo.js"
+  }
+}
