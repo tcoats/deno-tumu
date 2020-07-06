@@ -55,20 +55,19 @@ Run code on your server using configuration and javascript hosted on the web.
 
 `cmd` is an object that maps identifiers to code to run as a daemon.
 
-## Big rocks
+## Waiting on Deno support
 
-- [x] Filesystem isolation
-- [x] Auto domain and TLS. Via [Caddy](https://caddyserver.com) integration.
-- [x] Telegram integration
 - [ ] Network isolation. Not available within Deno. On the Deno roadmap.
 - [ ] CPU quota. Does not look supported by V8.
 - [ ] Memory quota. Available in V8. Not available within Deno. Not on the roadmap?
+
+## Big rocks
+
 - [ ] Pub sub. Implement via TCP + file sync'd queues. Reimplement resolute?
 - [ ] Single process. Requires a custom cli built within Deno. Or a plugin?
+- [ ] Single server multiple services? E.g. tcp and http?
 
-## Smaller
+## Smaller rocks
 
-- [x] Recycle ports.
-- [ ] Allow a local state.json file, reload on SIGHUP? Use fileWatcher?
-- [x] Optional caddy integration
 - [ ] Why doesn't setMyCommands work?
+- [ ] Test websockets
