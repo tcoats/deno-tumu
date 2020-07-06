@@ -1,3 +1,8 @@
+// list - List subscribed topics
+// sub - Subscribe to a topic
+// unsub - Unsubscribe from a topic
+// unsuball - Unsubscribe from all topics
+
 import { sleep, wait, rand, base58 } from './lib.js'
 
 const connect = async (telegram_token, refresh = 1000) => {
@@ -6,19 +11,22 @@ const connect = async (telegram_token, refresh = 1000) => {
   const token_chat_id = new Map()
   const chat_id_token = new Map()
 
-  const setMyCommands = async () => {
-    const res = await (await fetch(`https://api.telegram.org/bot${telegram_token}/setMyCommands`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify([
-        { command: 'sub', description: 'Subscribe to a topic' },
-        { command: 'unsub', description: 'Unsubscribe from a topic' },
-        { command: 'list', description: 'List subscribed topics' }
-      ])
-    })).json()
-    if (!res.ok) console.error(instance_id, result.description)
-  }
-  await setMyCommands()
+  // TODO: investigate why this isn't working
+  // const setMyCommands = async () => {
+  //   const res = await (await fetch(`https://api.telegram.org/bot${telegram_token}/setMyCommands`, {
+  //     method: 'POST',
+  //     headers: { 'Content-Type': 'application/json' },
+  //     body: JSON.stringify([
+  //       { command: 'list', description: 'List subscribed topics' },
+  //       { command: 'sub', description: 'Subscribe to a topic' },
+  //       { command: 'unsub', description: 'Unsubscribe from a topic' },
+  //       { command: 'unsuball', description: 'Unsubscribe from all topics' }
+  //     ])
+  //   })).json()
+  //   if (!res.ok) console.error(instance_id, result.description)
+  //   console.log(res)
+  // }
+  // await setMyCommands()
 
   const getLatestUpdateId = async () => {
     while (true) {

@@ -68,6 +68,7 @@ Run code on your server using configuration and javascript hosted on the web.
 
 ## Smaller
 
-- [ ] Recycle ports.
+- [x] Recycle ports.
 - [ ] Allow a local state.json file, reload on SIGHUP? Use fileWatcher?
-- [ ] Optional caddy integration
+- [x] Optional caddy integration
+- [ ] Why doesn't setMyCommands work?

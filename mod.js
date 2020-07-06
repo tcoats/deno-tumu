@@ -8,6 +8,7 @@ if (Deno.args.length != 1) {
 const state_url = Deno.args[0]
 
 let caddy_fingerprint = null
+let state_fingerprint = null
 let telegram_integration = null
 let telegram_topic = null
 const used_ports = new Set()
@@ -260,11 +261,15 @@ const update = async state => {
 }
 
 let lasterror = null
+const isurl = url => url.startsWith('http://') || url.startsWith('https://')
 const getstate = async () => {
   try {
-    const res = await fetch(state_url)
-    if (!res.ok) throw `${state_url} not available`
-    return await res.json()
+    if (isurl(state_url)) {
+      const res = await fetch(state_url)
+      if (!res.ok) throw `${state_url} not available`
+      return await res.json()
+    }
+    return JSON.parse(await Deno.readTextFile(state_url))
   }
   catch (e) {
     const error = e.toString()
@@ -278,6 +283,7 @@ const getstate = async () => {
 }
 
 let state = await wait(getstate, 1000)
+state_fingerprint = hash(JSON.stringify(state))
 if (state.caddy && state.caddy.starting_port) starting_port = state.caddy.starting_port
 await update(state)
 
@@ -286,7 +292,11 @@ const refresh = async () => {
   const release = await refresh_mutex.acquire()
   try {
     state = await getstate()
-    await update(state)
+    const fingerprint = hash(JSON.stringify(state))
+    if (state_fingerprint != fingerprint) {
+      state_fingerprint = fingerprint
+      await update(state)
+    }
   }
   catch (e) {
     console.error(e)

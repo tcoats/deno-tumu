@@ -1,15 +1,5 @@
 # Deno Tumu Example
 
-Spin up a file server on port 8080.
-
-```bash
-$ deno run \
-    --allow-net \
-    --allow-read \
-    https://deno.land/std/http/file_server.ts \
-    -p 8080
-```
-
 Run tumu against `state.json`.
 
 ```bash
@@ -20,9 +10,9 @@ $ deno run \
     --allow-read=./ \
     --allow-write=./ \
     --unstable \
-    ../mod.js \
-    http://localhost:8080/state.json
+    https://raw.githubusercontent.com/tcoats/deno-tumu/master/mod.js \
+    https://raw.githubusercontent.com/tcoats/deno-tumu/master/example/state.json
 ```
 
-`state.json` will spin up two echo servers.
-`state.json` and `echo.js` could be a secret github gist, your own public repo or a locally hosted file server.
+`state.json` can be a url or a local file.
+Code referenced can be hosted locally.

@@ -1,11 +1,11 @@
 {
   "state_refresh": 10000,
   "http": {
-    "test1.yourdomainhere.com": "http://localhost:8080/echo.js",
-    "test2.yourdomainhere.com": "http://localhost:8080/echo.js"
+    "test1.yourdomainhere.com": "https://raw.githubusercontent.com/tcoats/deno-tumu/master/example/echo.js",
+    "test2.yourdomainhere.com": "https://raw.githubusercontent.com/tcoats/deno-tumu/master/example/echo.js"
   },
   "cmd" : {
-    "identifier.here": "http://localhost:8080/ping.js",
+    "identifier.here": "https://raw.githubusercontent.com/tcoats/deno-tumu/master/example/ping.js",
   },
   "telegram": {
     "token": "XXXXX",
