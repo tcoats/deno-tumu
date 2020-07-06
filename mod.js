@@ -1,4 +1,4 @@
-import { hash, sleep, wait, exists, mutex, lines } from './lib.js'
+import { hash, sleep, wait, exists, mutex, lines, strip_ansi } from './lib.js'
 import telegram from './telegram.js'
 
 if (Deno.args.length != 1) {
@@ -31,11 +31,13 @@ const generate_topics = (topic, service, type) => [
 ]
 
 const log_error = (service, msg) => {
+  msg = strip_ansi(msg)
   if (telegram_integration)
     telegram_integration.publish(generate_topics(telegram_topic, service, 'error'), `${service} ${msg}`, true)
   console.error(service, msg)
 }
 const log_msg = (service, msg) => {
+  msg = strip_ansi(msg)
   if (telegram_integration)
     telegram_integration.publish(generate_topics(telegram_topic, service, 'log'), `${service} ${msg}`, false)
   console.log(service, msg)
@@ -249,6 +251,7 @@ const update = async state => {
       const body = JSON.stringify(caddy)
       const fingerprint = hash(body)
       if (caddy_fingerprint == fingerprint) return
+      console.log('updating caddy routes')
       caddy_fingerprint = fingerprint
       const response = await fetch('http://localhost:2019/load', {
         method: 'POST',

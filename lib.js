@@ -63,6 +63,7 @@ const base58 = n => {
   }
 
   return alphabet[n] + res
-};
+}
+const strip_ansi = s => s.replace(/[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g, '')
 
-export { hash, rand, sleep, wait, exists, mutex, lines, base58 }
+export { hash, rand, sleep, wait, exists, mutex, lines, base58, strip_ansi }
