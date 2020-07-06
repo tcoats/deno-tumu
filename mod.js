@@ -193,17 +193,18 @@ const update = async state => {
     starting_port = state.caddy.starting_port
   if (state.telegram && state.telegram.token && state.telegram.topic) {
     if (telegram_integration && telegram_integration.token != state.telegram.token) {
-      console.log('restarting telegram integration')
+      log_msg('telegram_integration', 'restarting')
       telegram_integration.close()
       telegram_integration = null
     }
     if (!telegram_integration) {
+      log_msg('telegram_integration', 'starting')
       console.log('starting telegram integration')
       telegram_integration = await telegram(state.telegram.token)
     }
   }
   else if (telegram_integration) {
-    console.log('stopping telegram integration')
+    log_msg('telegram_integration', 'stopping')
     telegram_integration.close()
     telegram_integration = null
   }
@@ -236,6 +237,7 @@ const update = async state => {
     }
     // no caddy and no http... no need
     if (!state.caddy && !state.http) return
+    if (state.caddy === false) return
     if (put.length > 0 || del.length > 0) {
       const caddy = { apps: { http: { servers: { srv0: {
         listen: [':443'],
@@ -251,7 +253,7 @@ const update = async state => {
       const body = JSON.stringify(caddy)
       const fingerprint = hash(body)
       if (caddy_fingerprint == fingerprint) return
-      console.log('updating caddy routes')
+      log_msg('caddy_integration', 'updating routes')
       caddy_fingerprint = fingerprint
       const response = await fetch('http://localhost:2019/load', {
         method: 'POST',
