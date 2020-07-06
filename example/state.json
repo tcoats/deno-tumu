@@ -5,7 +5,7 @@
     "test2.yourdomainhere.com": "https://raw.githubusercontent.com/tcoats/deno-tumu/master/example/echo.js"
   },
   "cmd" : {
-    "identifier.here": "https://raw.githubusercontent.com/tcoats/deno-tumu/master/example/ping.js",
+    "identifier.here": "https://raw.githubusercontent.com/tcoats/deno-tumu/master/example/ping.js"
   },
   "telegram": {
     "token": "XXXXX",
