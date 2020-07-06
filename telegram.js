@@ -73,48 +73,18 @@ const connect = async (telegram_token, refresh = 1000) => {
     return await res.json()
   }
 
-  const execPrivateCommands = async (chat_id, commands) => {
-    for (const command of commands) {
-      if (command.match(/^[/]?sub ([a-zA-Z0-9\.\*]+)$/i)) {
-        const id = command.split(' ')[1]
-        subscribe(id, chat_id)
-      }
-      else if (command.match(/^[/]?unsub ([a-zA-Z0-9\.\*]+)$/i)) {
-        const id = command.split(' ')[1]
-        unsubscribe(id, chat_id)
-      }
-      else if (command.match(/^[/]?unsuball$/i)) {
-        unsubscribeall(chat_id)
-      }
-      else if (command.match(/^[/]?list$/i)) {
-        const id = command.split(' ')[1]
-        const subscriptions = list(chat_id)
-        const message = subscriptions.length > 0
-          ? `\`${instance_id}\`\n${md_escape(subscriptions.join('\n'))}`
-          : `\`${instance_id}\`\n_No subscriptions_`
-        try {
-          const msg = await sendMessage(chat_id, message, false, false)
-          if (!msg.ok) console.error(msg.description)
-        }
-        catch (e) {
-          console.error(instance_id, e)
-        }
-      }
-    }
-  }
-
-  const execGroupCommands = async (chat_id, message_id, commands) => {
+  const execCommands = async (chat_id, message_id, commands) => {
     for (const command of commands) {
       if (command.match(/^\/sub ([a-zA-Z0-9\.\*]+)$/i)) {
         const id = command.split(' ')[1]
-        subscribe(id, chat_id, message_id)
+        subscribe(id, chat_id)
       }
       else if (command.match(/^\/unsub ([a-zA-Z0-9\.\*]+)$/i)) {
         const id = command.split(' ')[1]
-        unsubscribe(id, chat_id, message_id)
+        unsubscribe(id, chat_id)
       }
       else if (command.match(/^\/unsuball$/i)) {
-        unsubscribeall(chat_id, message_id)
+        unsubscribeall(chat_id)
       }
       else if (command.match(/^\/list$/i)) {
         const id = command.split(' ')[1]
@@ -148,18 +118,17 @@ const connect = async (telegram_token, refresh = 1000) => {
   let keepgoing = true
   ;(async () => {
     while (true) {
-      if (!keepgoing) return
+      if (!keepgoing) break
       try {
         const updates = await wait(getLatestUpdates, refresh)
         if (!updates.ok) throw 'Updates unavailable'
         for (const update of updates.result) {
           if (last_seen_update_id >= update.update_id) continue
           last_seen_update_id = update.update_id
-          const chat_id = update.message.chat.id
-          if (update.message.chat.type == 'group')
-            await execGroupCommands(chat_id, update.message.message_id, update.message.text.split('\n'))
-          else
-            await execPrivateCommands(chat_id, update.message.message_id, update.message.text.split('\n'))
+          await execCommands(
+            update.message.chat.id,
+            update.message.message_id,
+            update.message.text.split('\n'))
         }
       }
       catch(e) {

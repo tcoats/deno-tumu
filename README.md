@@ -29,36 +29,42 @@ Run code on your server using configuration and javascript hosted on the web.
 
 ```json
 {
+  "state_refresh": 10000,
   "http": {
     "test1.yourdomainhere.com": "http://localhost:8080/echo.js",
     "test2.yourdomainhere.com": "http://localhost:8080/echo.js"
   },
-  "cwd": {
+  "cmd": {
     "test3.yourdomainhere.com": "http://localhost:8080/ping.js",
     "test4.yourdomainhere.com": "http://localhost:8080/ping.js"
   },
-  "state_refresh": 10000,
-  "starting_port": 9001,
-  "telegram_token": "XXXXX",
-  "telegram_topic": "YYYYY",
-  "caddy_routes": []
+  "telegram": {
+    "token": "XXXXX",
+    "topic": "YYYYY"
+  },
+  "caddy": {
+    "starting_port": 9001,
+    "routes": []
+  }
 }
 ```
 
-`refresh` and `starting_port` are optional and will default to the values above.
+`state_refresh` and `starting_port` are optional and will default to the values above.
 
-`serve` is an object that maps the domains to serve from and the code to execute for that instance.
+`http` is an object that maps the domains to serve from and the code to execute for that instance.
+
+`cmd` is an object that maps identifiers to code to run as a daemon.
 
 ## Big rocks
 
 - [x] Filesystem isolation
 - [x] Auto domain and TLS. Via [Caddy](https://caddyserver.com) integration.
 - [x] Telegram integration
-- [ ] Network isolation. Not available within Deno. On the roadmap.
+- [ ] Network isolation. Not available within Deno. On the Deno roadmap.
 - [ ] CPU quota. Does not look supported by V8.
-- [ ] Memory quota. Available in V8. Not available within Deno.
-- [ ] Pub sub.
-- [ ] Single process. Requires a custom cli built within Deno. Plugin?
+- [ ] Memory quota. Available in V8. Not available within Deno. Not on the roadmap?
+- [ ] Pub sub. Implement via TCP + file sync'd queues. Reimplement resolute?
+- [ ] Single process. Requires a custom cli built within Deno. Or a plugin?
 
 ## Smaller
 

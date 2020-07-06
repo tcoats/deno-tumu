@@ -10,7 +10,14 @@ const state_url = Deno.args[0]
 let caddy_fingerprint = null
 let telegram_integration = null
 let telegram_topic = null
-let nextport = 9001
+const used_ports = new Set()
+let starting_port = 9001
+const next_port = () => {
+  let port = starting_port
+  while (used_ports.has(port)) port++
+  used_ports.add(port)
+  return port
+}
 const handles = new Map()
 const http = new Set()
 const cmd = new Set()
@@ -36,7 +43,7 @@ let log_msg = (service, msg) => {
 const launch_http = async (host, url) => {
   http.add(host)
   const slug = host.replace(/:/g, '_')
-  const handle = { type: 'http', host, url, slug, port: nextport++, status: 'launching' }
+  const handle = { type: 'http', host, url, slug, port: next_port(), status: 'launching' }
   handles.set(host, handle)
   if (!await exists(slug)) Deno.mkdir(slug)
   start(handle)
@@ -134,6 +141,7 @@ const remove_http = async handle => {
   handle.status = 'stopping'
   log_msg(handle.host, 'stopping')
   stop(handle)
+  used_ports.delete(handle.port)
 }
 
 const remove_cmd = async handle => {
@@ -176,16 +184,19 @@ const diff = (prev, now) => {
 }
 
 const update = async state => {
-  telegram_topic = state.telegram_topic
-  if (state.telegram_token && state.telegram_topic) {
-    if (telegram_integration && telegram_integration.token != state.telegram_token) {
+  if (state.telegram && state.telegram.topic)
+    telegram_topic = state.telegram.topic
+  if (state.caddy && state.caddy.starting_port)
+    starting_port = state.caddy.starting_port
+  if (state.telegram && state.telegram.token && state.telegram.topic) {
+    if (telegram_integration && telegram_integration.token != state.telegram.token) {
       console.log('restarting telegram integration')
       telegram_integration.close()
       telegram_integration = null
     }
     if (!telegram_integration) {
       console.log('starting telegram integration')
-      telegram_integration = await telegram(state.telegram_token)
+      telegram_integration = await telegram(state.telegram.token)
     }
   }
   else if (telegram_integration) {
@@ -201,10 +212,10 @@ const update = async state => {
     for (const key of same) {
       const newurl = newcmd.get(key)
       const handle = handles.get(key)
-      if (handle.url != newurl) {
-        handle.url = newurl
-        if (handle.status == 'stopped') start(handle)
-      }
+      if (handle.url == newurl) continue
+      handle.url = newurl
+      if (handle.status != 'stopped') continue
+      start(handle)
     }
   }
   {
@@ -215,16 +226,17 @@ const update = async state => {
     for (const key of same) {
       const newurl = newhttp.get(key)
       const handle = handles.get(key)
-      if (handle.url != newurl) {
-        handle.url = newurl
-        console.log('should start with new url?', handle)
-        if (handle.status == 'stopped') start(handle)
-      }
+      if (handle.url == newurl) continue
+      handle.url = newurl
+      if (handle.status != 'stopped') continue
+      start(handle)
     }
+    // no caddy and no http... no need
+    if (!state.caddy && !state.http) return
     if (put.length > 0 || del.length > 0) {
       const caddy = { apps: { http: { servers: { srv0: {
         listen: [':443'],
-        routes: (state.caddy_routes || []).concat(Array.from(newhttp.keys(), host => ({
+        routes: (state.caddy ? state.caddy.routes : []).concat(Array.from(newhttp.keys(), host => ({
           handle: [{
             handler: 'reverse_proxy',
             upstreams: [{ dial: `127.0.0.1:${handles.get(host).port}` }]
@@ -251,6 +263,7 @@ let lasterror = null
 const getstate = async () => {
   try {
     const res = await fetch(state_url)
+    if (!res.ok) throw `${state_url} not available`
     return await res.json()
   }
   catch (e) {
@@ -265,7 +278,7 @@ const getstate = async () => {
 }
 
 let state = await wait(getstate, 1000)
-if (state.starting_port) nextport = state.starting_port
+if (state.caddy && state.caddy.starting_port) starting_port = state.caddy.starting_port
 await update(state)
 
 const refresh_mutex = mutex()
