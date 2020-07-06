@@ -8,6 +8,7 @@ const ping = () => {
 }
 ping()
 
-const server = serve({ port })
+// Restrict connections locally - from caddy only
+const server = serve({ hostname: 'localhost', port })
 for await (const req of server)
   req.respond({ body: host })
