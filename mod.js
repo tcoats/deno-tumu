@@ -1,44 +1,5 @@
-// lib
-const hash = s => [...s].reduce((hash, c) => (((hash << 5) - hash) + c.charCodeAt(0)) | 0, 0)
-const sleep = time => new Promise(res => setTimeout(res, time))
-const wait = (fn, delay) => new Promise(async res => {
-  const attempt = async () => {
-    try { res(await fn()) }
-    catch (e) { return false }
-    return true
-  }
-  while (!await attempt()) await sleep(delay)
-})
-const exists = async path => {
-  try {
-    await Deno.stat(path)
-    return true
-  } catch (e) {
-    if (e instanceof Deno.errors.NotFound) return false
-    else throw e
-  }
-}
-const mutex = () => {
-  const api = {
-    islocked: false,
-    current: Promise.resolve(),
-    acquire: () => {
-      let release
-      const next = new Promise(resolve => release = () => {
-        api.islocked = false
-        resolve()
-      })
-      const result = api.current.then(() => {
-        api.islocked = true
-        return release
-      })
-      api.current = next
-      return result
-    }
-  }
-  return api
-}
-
+import { hash, sleep, wait, exists, mutex, lines } from './lib.js'
+import telegram from './telegram.js'
 
 if (Deno.args.length != 1) {
   console.log('url for JSON configuration required')
@@ -46,14 +7,45 @@ if (Deno.args.length != 1) {
 }
 const state_url = Deno.args[0]
 
+let caddy_fingerprint = null
+let telegram_integration = null
+let telegram_topic = null
 let nextport = 9001
 const handles = new Map()
-const hosts = new Set()
+const http = new Set()
+const cmd = new Set()
 
-const launch = async (host, url) => {
-  hosts.add(host)
+const generate_topics = (topic, service, type) => [
+  `${telegram_topic}.*`,
+  `${telegram_topic}.${service}.*`,
+  `${telegram_topic}.${type}.*`,
+  `${telegram_topic}.${service}.${type}.*`
+]
+
+let log_error = (service, msg) => {
+  if (telegram_integration)
+    telegram_integration.publish(generate_topics(telegram_topic, service, 'error'), `${service} ${msg}`, true)
+  console.error(service, msg)
+}
+let log_msg = (service, msg) => {
+  if (telegram_integration)
+    telegram_integration.publish(generate_topics(telegram_topic, service, 'log'), `${service} ${msg}`, false)
+  console.log(service, msg)
+}
+
+const launch_http = async (host, url) => {
+  http.add(host)
   const slug = host.replace(/:/g, '_')
-  const handle = { host, url, slug, port: nextport++, status: 'launching' }
+  const handle = { type: 'http', host, url, slug, port: nextport++, status: 'launching' }
+  handles.set(host, handle)
+  if (!await exists(slug)) Deno.mkdir(slug)
+  start(handle)
+}
+
+const launch_cmd = async (host, url) => {
+  cmd.add(host)
+  const slug = host.replace(/:/g, '_')
+  const handle = { type: 'cmd', host, url, slug, status: 'launching' }
   handles.set(host, handle)
   if (!await exists(slug)) Deno.mkdir(slug)
   start(handle)
@@ -72,26 +64,40 @@ const start = async handle => {
   }
   catch (e) {
     handle.status = 'retrying'
-    console.error(e)
+    log_error(handle.host, e)
     return
   }
-  const payload = {
-    host: handle.host,
-    url: handle.url,
-    port: handle.port,
-    fingerprint: handle.fingerprint
-  }
+  const payload = handle.type == 'http'
+    ? {
+      host: handle.host,
+      url: handle.url,
+      port: handle.port,
+      fingerprint: handle.fingerprint
+    }
+    : {
+      host: handle.host,
+      url: handle.url,
+      fingerprint: handle.fingerprint
+    }
   handle.process = await Deno.run({
-    cmd: `deno run --allow-net --allow-read=./ --allow-write=./ --reload=${handle.url} ${handle.url} ${JSON.stringify(payload)}`.split(' '),
-    stdout: 'inherit', stderr: 'inherit', stdin: 'null',
+    cmd: `deno run --quiet --allow-net --allow-read=./ --allow-write=./ --reload=${handle.url} ${handle.url} ${JSON.stringify(payload)}`.split(' '),
+    stdout: 'piped',
+    stderr: 'piped',
+    stdin: 'null',
     cwd: handle.slug
   })
   handle.status = 'running'
-  console.log(handle.host, 'running')
+  log_msg(handle.host, 'running')
+  ;(async () => {
+    for await (const line of lines(handle.process.stdout)) log_msg(handle.host, line)
+  })()
+  ;(async () => {
+    for await (const line of lines(handle.process.stderr)) log_error(handle.host, line)
+  })()
   await handle.process.status()
   if (handle.status == 'running') {
     handle.status = 'stopped'
-    console.log(handle.host, 'stopped')
+    log_msg(handle.host, 'stopped')
   }
 }
 
@@ -117,16 +123,24 @@ const stop = handle => new Promise(res => {
 
 const restart = async handle => {
   handle.status = 'restarting'
-  console.log(handle.host, 'restarting')
+  log_msg(handle.host, 'restarting')
   await stop(handle)
   start(handle)
 }
 
-const remove = async handle => {
-  hosts.delete(handle.host)
+const remove_http = async handle => {
+  http.delete(handle.host)
   handles.delete(handle.host)
   handle.status = 'stopping'
-  console.log(handle.host, 'stopping')
+  log_msg(handle.host, 'stopping')
+  stop(handle)
+}
+
+const remove_cmd = async handle => {
+  cmd.delete(handle.host)
+  handles.delete(handle.host)
+  handle.status = 'stopping'
+  log_msg(handle.host, 'stopping')
   stop(handle)
 }
 
@@ -161,37 +175,75 @@ const diff = (prev, now) => {
   return res
 }
 
-let caddy_fingerprint = null
 const update = async state => {
-  const newhosts = new Map(Object.entries(state.serve))
-  const { put, del, same } = diff(
-    hosts,
-    newhosts
-  )
-  for (const key of put) launch(key, newhosts.get(key))
-  for (const key of del) remove(handles.get(key))
-  for (const key of same) handles.get(key).url = newhosts.get(key)
-  if (put.length > 0 || del.length > 0) {
-    const caddy = { apps: { http: { servers: { srv0: {
-      listen: [':443'],
-      routes: (state.routes || []).concat(Array.from(newhosts.keys(), host => ({
-        handle: [{
-          handler: 'reverse_proxy',
-          upstreams: [{ dial: `127.0.0.1:${handles.get(host).port}` }]
-        }],
-        match: [{ host: [host] }],
-        terminal: true
-      })))
-    } } } } }
-    const body = JSON.stringify(caddy)
-    const fingerprint = hash(body)
-    if (caddy_fingerprint == fingerprint) return
-    const response = await fetch('http://localhost:2019/load', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body
-    })
-    if (!response.ok) console.error(await response.text())
+  telegram_topic = state.telegram_topic
+  if (state.telegram_token && state.telegram_topic) {
+    if (telegram_integration && telegram_integration.token != state.telegram_token) {
+      console.log('restarting telegram integration')
+      telegram_integration.close()
+      telegram_integration = null
+    }
+    if (!telegram_integration) {
+      console.log('starting telegram integration')
+      telegram_integration = await telegram(state.telegram_token)
+    }
+  }
+  else if (telegram_integration) {
+    console.log('stopping telegram integration')
+    telegram_integration.close()
+    telegram_integration = null
+  }
+  {
+    const newcmd = new Map(Object.entries(state.cmd || {}))
+    const { put, del, same } = diff(cmd, newcmd)
+    for (const key of put) launch_cmd(key, newcmd.get(key))
+    for (const key of del) remove_cmd(handles.get(key))
+    for (const key of same) {
+      const newurl = newcmd.get(key)
+      const handle = handles.get(key)
+      if (handle.url != newurl) {
+        handle.url = newurl
+        if (handle.status == 'stopped') start(handle)
+      }
+    }
+  }
+  {
+    const newhttp = new Map(Object.entries(state.http || {}))
+    const { put, del, same } = diff(http, newhttp)
+    for (const key of put) launch_http(key, newhttp.get(key))
+    for (const key of del) remove_http(handles.get(key))
+    for (const key of same) {
+      const newurl = newhttp.get(key)
+      const handle = handles.get(key)
+      if (handle.url != newurl) {
+        handle.url = newurl
+        console.log('should start with new url?', handle)
+        if (handle.status == 'stopped') start(handle)
+      }
+    }
+    if (put.length > 0 || del.length > 0) {
+      const caddy = { apps: { http: { servers: { srv0: {
+        listen: [':443'],
+        routes: (state.caddy_routes || []).concat(Array.from(newhttp.keys(), host => ({
+          handle: [{
+            handler: 'reverse_proxy',
+            upstreams: [{ dial: `127.0.0.1:${handles.get(host).port}` }]
+          }],
+          match: [{ host: [host] }],
+          terminal: true
+        })))
+      } } } } }
+      const body = JSON.stringify(caddy)
+      const fingerprint = hash(body)
+      if (caddy_fingerprint == fingerprint) return
+      caddy_fingerprint = fingerprint
+      const response = await fetch('http://localhost:2019/load', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body
+      })
+      if (!response.ok) log_error('caddy_integration', await response.text())
+    }
   }
 }
 
@@ -203,28 +255,29 @@ const getstate = async () => {
   }
   catch (e) {
     const error = e.toString()
-    // squelch repeat errors
+    // squelch repeated errors
     if (lasterror != error) {
       lasterror = error
-      console.error(e)
+      log_error('state_integration', e)
     }
     throw e
   }
 }
 
-const initial_state = await wait(getstate, 1000)
-if (initial_state.starting_port) nextport = initial_state.starting_port
-await update(initial_state)
+let state = await wait(getstate, 1000)
+if (state.starting_port) nextport = state.starting_port
+await update(state)
 
 const refresh_mutex = mutex()
 const refresh = async () => {
   const release = await refresh_mutex.acquire()
-  let state = null
   try {
     state = await getstate()
     await update(state)
   }
-  catch (e) { }
+  catch (e) {
+    console.error(e)
+  }
 
   for (const [key, value] of handles.entries()) {
     if (value.status == 'running') shouldrefresh(value)
@@ -232,7 +285,6 @@ const refresh = async () => {
     else if (value.status == 'retrying') start(value)
   }
   release()
-  setTimeout(refresh, state.refresh || 10000)
+  setTimeout(refresh, state.state_refresh || 10000)
 }
-
-setTimeout(refresh, initial_state.refresh || 10000)
+setTimeout(refresh, state.state_refresh || 10000)

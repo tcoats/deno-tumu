@@ -29,12 +29,19 @@ Run code on your server using configuration and javascript hosted on the web.
 
 ```json
 {
-  "serve": {
+  "http": {
     "test1.yourdomainhere.com": "http://localhost:8080/echo.js",
     "test2.yourdomainhere.com": "http://localhost:8080/echo.js"
   },
-  "refresh": 10000,
-  "starting_port": 9001
+  "cwd": {
+    "test3.yourdomainhere.com": "http://localhost:8080/ping.js",
+    "test4.yourdomainhere.com": "http://localhost:8080/ping.js"
+  },
+  "state_refresh": 10000,
+  "starting_port": 9001,
+  "telegram_token": "XXXXX",
+  "telegram_topic": "YYYYY",
+  "caddy_routes": []
 }
 ```
 
@@ -42,13 +49,19 @@ Run code on your server using configuration and javascript hosted on the web.
 
 `serve` is an object that maps the domains to serve from and the code to execute for that instance.
 
-## Status
+## Big rocks
 
 - [x] Filesystem isolation
 - [x] Auto domain and TLS. Via [Caddy](https://caddyserver.com) integration.
+- [x] Telegram integration
 - [ ] Network isolation. Not available within Deno. On the roadmap.
 - [ ] CPU quota. Does not look supported by V8.
 - [ ] Memory quota. Available in V8. Not available within Deno.
 - [ ] Pub sub.
-- [ ] Single process. Requires a custom cli built within Deno.
+- [ ] Single process. Requires a custom cli built within Deno. Plugin?
+
+## Smaller
+
 - [ ] Recycle ports.
+- [ ] Allow a local state.json file, reload on SIGHUP? Use fileWatcher?
+- [ ] Optional caddy integration

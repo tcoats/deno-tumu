@@ -1,6 +1,15 @@
 {
-  "serve": {
+  "http": {
     "test1.yourdomainhere.com": "http://localhost:8080/echo.js",
     "test2.yourdomainhere.com": "http://localhost:8080/echo.js"
-  }
+  },
+  "cmd" : {
+    "identifier.here": "http://localhost:8080/ping.js",
+  },
+  "state_refresh": 10000,
+  "starting_port": 9001,
+  "telegram_token": null,
+  "telegram_topic": null,
+  "caddy_integration": true,
+  "caddy_routes": null
 }
