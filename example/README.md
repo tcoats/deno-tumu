@@ -14,6 +14,7 @@ Run tumu against `state.json`.
 
 ```bash
 $ deno run \
+    --quiet \
     --allow-net \
     --allow-run \
     --allow-read=./ \

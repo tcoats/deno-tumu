@@ -29,12 +29,12 @@ const generate_topics = (topic, service, type) => [
   `${telegram_topic}.${service}.${type}.*`
 ]
 
-let log_error = (service, msg) => {
+const log_error = (service, msg) => {
   if (telegram_integration)
     telegram_integration.publish(generate_topics(telegram_topic, service, 'error'), `${service} ${msg}`, true)
   console.error(service, msg)
 }
-let log_msg = (service, msg) => {
+const log_msg = (service, msg) => {
   if (telegram_integration)
     telegram_integration.publish(generate_topics(telegram_topic, service, 'log'), `${service} ${msg}`, false)
   console.log(service, msg)
